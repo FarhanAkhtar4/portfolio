@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
-import { Mail, Phone, MapPin, Github, Send, ArrowUpRight, Brain, Loader2 } from "lucide-react";
+import { Mail, Phone, MapPin, Github, Send, ArrowUpRight, Brain, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -49,6 +49,15 @@ const contactInfo = [
   },
 ];
 
+/**
+ * Contact form using FormSubmit.co — free, no API keys, no SMTP.
+ * Submits directly from the browser (client-side) to bypass Cloudflare.
+ * First submission triggers a confirmation email. After confirming, it works forever.
+ */
+const FORMSUBMIT_ENDPOINT = `https://formsubmit.co/ajax/${siteConfig.email}`;
+
+type FormStatus = "idle" | "submitting" | "success" | "error";
+
 export default function ContactSection() {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
@@ -56,42 +65,77 @@ export default function ContactSection() {
     email: "",
     message: "",
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [status, setStatus] = useState<FormStatus>("idle");
+  const [errorMsg, setErrorMsg] = useState("");
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    setStatus("submitting");
+    setErrorMsg("");
 
     try {
-      const response = await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+      // Submit directly from browser to FormSubmit.co
+      const formBody = new URLSearchParams({
+        name: formData.name,
+        email: formData.email,
+        message: formData.message,
+        _subject: `Portfolio Contact: ${formData.name}`,
+        _captcha: "false",
+        _template: "box",
       });
 
-      const data = await response.json();
+      const response = await fetch(FORMSUBMIT_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Accept: "application/json",
+        },
+        body: formBody.toString(),
+      });
 
-      if (response.ok) {
+      const result = await response.json();
+
+      // Handle FormSubmit activation (first time only)
+      if (result.success === "false" && result.message?.includes("Activation")) {
+        setStatus("error");
+        setErrorMsg(
+          "Form activation pending. The site owner needs to check their email and click the activation link from FormSubmit.co. After activation, the form works forever."
+        );
+        toast({
+          title: "Activation Required",
+          description: "Check email for FormSubmit.co activation link.",
+          variant: "destructive",
+        });
+      } else if (result.success) {
+        setStatus("success");
+        setFormData({ name: "", email: "", message: "" });
         toast({
           title: "Message Sent!",
           description: "Thanks for reaching out. I'll get back to you soon.",
         });
-        setFormData({ name: "", email: "", message: "" });
       } else {
+        // FormSubmit returns specific messages
+        const msg = result.message || "Something went wrong.";
+        setErrorMsg(msg);
+        setStatus("error");
         toast({
           title: "Could Not Send",
-          description: data.error || "Something went wrong. Please try again.",
+          description: msg,
           variant: "destructive",
         });
       }
     } catch {
+      // Network error — offer mailto fallback
+      const mailtoLink = `mailto:${siteConfig.email}?subject=Portfolio Contact: ${encodeURIComponent(formData.name)}&body=${encodeURIComponent(formData.message)}%0A%0AFrom: ${encodeURIComponent(formData.email)}`;
+      setErrorMsg("Network error. Try the email fallback below.");
+      setStatus("error");
       toast({
         title: "Network Error",
-        description: "Please check your connection and try again.",
+        description: "Use the email fallback to send your message.",
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
+      // Store mailto link for fallback button
+      window.__CONTACT_FALLBACK = mailtoLink;
     }
   };
 
@@ -160,81 +204,116 @@ export default function ContactSection() {
             viewport={{ once: true, margin: "-80px" }}
             transition={{ duration: 0.6, delay: 0.1 }}
           >
-            <form
-              onSubmit={handleSubmit}
-              className="glass-card p-6 space-y-5"
-            >
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm text-gray-300">
-                  Name
-                </Label>
-                <Input
-                  id="name"
-                  placeholder="Your name"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, name: e.target.value }))
-                  }
-                  required
-                  disabled={isSubmitting}
-                  className="bg-white/[0.03] border-white/[0.08] text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:ring-purple-500/20"
-                />
+            {status === "success" ? (
+              /* Success State */
+              <div className="glass-card p-8 text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto">
+                  <CheckCircle2 className="h-8 w-8 text-emerald-400" />
+                </div>
+                <h3 className="text-xl font-bold text-white">Message Sent!</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">
+                  Thanks for reaching out. I&apos;ll get back to you as soon as possible.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => setStatus("idle")}
+                  className="border-white/10 text-gray-300 hover:text-white hover:bg-white/5 mt-2"
+                >
+                  Send Another Message
+                </Button>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm text-gray-300">
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="your@email.com"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, email: e.target.value }))
-                  }
-                  required
-                  disabled={isSubmitting}
-                  className="bg-white/[0.03] border-white/[0.08] text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:ring-purple-500/20"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="message" className="text-sm text-gray-300">
-                  Message
-                </Label>
-                <Textarea
-                  id="message"
-                  placeholder="Tell me about the role or project..."
-                  rows={4}
-                  value={formData.message}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, message: e.target.value }))
-                  }
-                  required
-                  disabled={isSubmitting}
-                  className="bg-white/[0.03] border-white/[0.08] text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:ring-purple-500/20 resize-none"
-                />
-              </div>
-
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-semibold shadow-lg shadow-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            ) : (
+              /* Form */
+              <form
+                onSubmit={handleSubmit}
+                className="glass-card p-6 space-y-5"
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    <Send className="mr-2 h-4 w-4" />
-                    Send Message
-                  </>
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-sm text-gray-300">
+                    Name
+                  </Label>
+                  <Input
+                    id="name"
+                    placeholder="Your name"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, name: e.target.value }))
+                    }
+                    required
+                    disabled={status === "submitting"}
+                    className="bg-white/[0.03] border-white/[0.08] text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:ring-purple-500/20"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm text-gray-300">
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={formData.email}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, email: e.target.value }))
+                    }
+                    required
+                    disabled={status === "submitting"}
+                    className="bg-white/[0.03] border-white/[0.08] text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:ring-purple-500/20"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="message" className="text-sm text-gray-300">
+                    Message
+                  </Label>
+                  <Textarea
+                    id="message"
+                    placeholder="Tell me about the role or project..."
+                    rows={4}
+                    value={formData.message}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, message: e.target.value }))
+                    }
+                    required
+                    disabled={status === "submitting"}
+                    className="bg-white/[0.03] border-white/[0.08] text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:ring-purple-500/20 resize-none"
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={status === "submitting"}
+                  className="w-full bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-semibold shadow-lg shadow-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {status === "submitting" ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Send Message
+                    </>
+                  )}
+                </Button>
+
+                {/* Error message with mailto fallback */}
+                {errorMsg && (
+                  <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-300">
+                    <p className="mb-2">{errorMsg}</p>
+                    <a
+                      href={`mailto:${siteConfig.email}?subject=${encodeURIComponent("Portfolio Contact: " + formData.name)}&body=${encodeURIComponent(formData.message + "\n\nFrom: " + formData.email)}`}
+                      className="inline-flex items-center gap-1.5 text-purple-300 hover:text-purple-200 underline text-xs"
+                    >
+                      <Mail className="h-3 w-3" />
+                      Or send via email directly
+                    </a>
+                  </div>
                 )}
-              </Button>
-            </form>
+              </form>
+            )}
           </motion.div>
         </div>
       </div>
