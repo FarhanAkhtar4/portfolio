@@ -12,14 +12,14 @@ interface MagneticButtonProps {
 export default function MagneticButton({
   children,
   className = "",
-  strength = 0.3,
+  strength = 0.25,
 }: MagneticButtonProps) {
   const ref = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
-  const springX = useSpring(x, { stiffness: 150, damping: 15 });
-  const springY = useSpring(y, { stiffness: 150, damping: 15 });
+  const springX = useSpring(x, { stiffness: 200, damping: 20, mass: 0.5 });
+  const springY = useSpring(y, { stiffness: 200, damping: 20, mass: 0.5 });
 
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
     if (!ref.current) return;

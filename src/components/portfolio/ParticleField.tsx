@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useMemo, useCallback } from "react";
+import { useRef, useMemo } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
-function Particles({ count = 800 }: { count?: number }) {
+function Particles({ count = 250 }: { count?: number }) {
   const mesh = useRef<THREE.Points>(null!);
   const mousePos = useRef({ x: 0, y: 0 });
   const { viewport } = useThree();
@@ -23,9 +23,9 @@ function Particles({ count = 800 }: { count?: number }) {
       pos[i3 + 1] = (Math.random() - 0.5) * 20;
       pos[i3 + 2] = (Math.random() - 0.5) * 10;
 
-      vel[i3] = (Math.random() - 0.5) * 0.005;
-      vel[i3 + 1] = (Math.random() - 0.5) * 0.005;
-      vel[i3 + 2] = (Math.random() - 0.5) * 0.002;
+      vel[i3] = (Math.random() - 0.5) * 0.004;
+      vel[i3 + 1] = (Math.random() - 0.5) * 0.004;
+      vel[i3 + 2] = (Math.random() - 0.5) * 0.001;
 
       const t = Math.random();
       const c = t < 0.4 ? purple : t < 0.7 ? cyan : white;
@@ -36,54 +36,44 @@ function Particles({ count = 800 }: { count?: number }) {
     return [pos, vel, col];
   }, [count]);
 
-  const handlePointerMove = useCallback(
-    (e: { clientX: number; clientY: number }) => {
-      mousePos.current.x = (e.clientX / window.innerWidth) * 2 - 1;
-      mousePos.current.y = -(e.clientY / window.innerHeight) * 2 + 1;
-    },
-    []
-  );
-
   useFrame((state) => {
     if (!mesh.current) return;
     const time = state.clock.elapsedTime;
-    const positionArray = mesh.current.geometry.attributes.position
-      .array as Float32Array;
+    const pa = mesh.current.geometry.attributes.position.array as Float32Array;
+
+    const mx = mousePos.current.x * viewport.width * 0.5;
+    const my = mousePos.current.y * viewport.height * 0.5;
+    const mouseRadius = 3;
+    const mouseRadiusSq = mouseRadius * mouseRadius;
 
     for (let i = 0; i < count; i++) {
       const i3 = i * 3;
-      positionArray[i3] += velocities[i3] + Math.sin(time * 0.3 + i * 0.1) * 0.001;
-      positionArray[i3 + 1] +=
-        velocities[i3 + 1] + Math.cos(time * 0.2 + i * 0.1) * 0.001;
+      pa[i3] += velocities[i3] + Math.sin(time * 0.3 + i * 0.1) * 0.0008;
+      pa[i3 + 1] += velocities[i3 + 1] + Math.cos(time * 0.2 + i * 0.1) * 0.0008;
 
-      // Wrap around
-      if (positionArray[i3] > 10) positionArray[i3] = -10;
-      if (positionArray[i3] < -10) positionArray[i3] = 10;
-      if (positionArray[i3 + 1] > 10) positionArray[i3 + 1] = -10;
-      if (positionArray[i3 + 1] < -10) positionArray[i3 + 1] = 10;
+      if (pa[i3] > 10) pa[i3] = -10;
+      if (pa[i3] < -10) pa[i3] = 10;
+      if (pa[i3 + 1] > 10) pa[i3 + 1] = -10;
+      if (pa[i3 + 1] < -10) pa[i3 + 1] = 10;
 
-      // Mouse influence
-      const mx = mousePos.current.x * viewport.width * 0.5;
-      const my = mousePos.current.y * viewport.height * 0.5;
-      const dx = positionArray[i3] - mx;
-      const dy = positionArray[i3 + 1] - my;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 3) {
-        const force = (3 - dist) * 0.002;
-        positionArray[i3] += dx * force;
-        positionArray[i3 + 1] += dy * force;
+      // Mouse influence — distance squared (no sqrt)
+      const dx = pa[i3] - mx;
+      const dy = pa[i3 + 1] - my;
+      const distSq = dx * dx + dy * dy;
+      if (distSq < mouseRadiusSq) {
+        const dist = Math.sqrt(distSq);
+        const force = (mouseRadius - dist) * 0.0015;
+        pa[i3] += (dx / dist) * force;
+        pa[i3 + 1] += (dy / dist) * force;
       }
     }
 
     mesh.current.geometry.attributes.position.needsUpdate = true;
-    mesh.current.rotation.z = time * 0.015;
+    mesh.current.rotation.z = time * 0.01;
   });
 
   return (
-    <points
-      ref={mesh}
-      onPointerMove={handlePointerMove as never}
-    >
+    <points ref={mesh}>
       <bufferGeometry>
         <bufferAttribute
           attach="attributes-position"
@@ -99,10 +89,10 @@ function Particles({ count = 800 }: { count?: number }) {
         />
       </bufferGeometry>
       <pointsMaterial
-        size={0.035}
+        size={0.04}
         vertexColors
         transparent
-        opacity={0.6}
+        opacity={0.5}
         sizeAttenuation
         blending={THREE.AdditiveBlending}
         depthWrite={false}
@@ -116,8 +106,7 @@ function NeuralLines() {
 
   const { positions } = useMemo(() => {
     const pos: number[] = [];
-    // Create connection lines between random points
-    for (let i = 0; i < 120; i++) {
+    for (let i = 0; i < 60; i++) {
       const x1 = (Math.random() - 0.5) * 12;
       const y1 = (Math.random() - 0.5) * 12;
       const z1 = (Math.random() - 0.5) * 6;
@@ -131,9 +120,7 @@ function NeuralLines() {
 
   useFrame((state) => {
     if (!linesRef.current) return;
-    linesRef.current.rotation.z = state.clock.elapsedTime * 0.01;
-    linesRef.current.material.opacity =
-      0.04 + Math.sin(state.clock.elapsedTime * 0.5) * 0.02;
+    linesRef.current.rotation.z = state.clock.elapsedTime * 0.008;
   });
 
   return (
@@ -149,7 +136,7 @@ function NeuralLines() {
       <lineBasicMaterial
         color="#8b5cf6"
         transparent
-        opacity={0.04}
+        opacity={0.035}
         blending={THREE.AdditiveBlending}
       />
     </lineSegments>
@@ -159,51 +146,36 @@ function NeuralLines() {
 function FloatingGeometry() {
   const torusRef = useRef<THREE.Mesh>(null!);
   const icosaRef = useRef<THREE.Mesh>(null!);
-  const octaRef = useRef<THREE.Mesh>(null!);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
     if (torusRef.current) {
-      torusRef.current.rotation.x = t * 0.2;
-      torusRef.current.rotation.y = t * 0.15;
-      torusRef.current.position.y = Math.sin(t * 0.4) * 0.5;
+      torusRef.current.rotation.x = t * 0.15;
+      torusRef.current.rotation.y = t * 0.1;
+      torusRef.current.position.y = Math.sin(t * 0.3) * 0.4;
     }
     if (icosaRef.current) {
-      icosaRef.current.rotation.x = t * 0.15;
-      icosaRef.current.rotation.z = t * 0.1;
-      icosaRef.current.position.y = Math.cos(t * 0.3) * 0.4;
-    }
-    if (octaRef.current) {
-      octaRef.current.rotation.y = t * 0.2;
-      octaRef.current.rotation.z = t * 0.15;
-      octaRef.current.position.y = Math.sin(t * 0.35 + 1) * 0.3;
+      icosaRef.current.rotation.x = t * 0.1;
+      icosaRef.current.rotation.z = t * 0.08;
+      icosaRef.current.position.y = Math.cos(t * 0.25) * 0.3;
     }
   });
 
   return (
     <>
       <mesh ref={torusRef} position={[4, 1, -3]}>
-        <torusGeometry args={[0.6, 0.15, 16, 32]} />
-        <meshStandardMaterial
+        <torusGeometry args={[0.6, 0.15, 12, 24]} />
+        <meshBasicMaterial
           color="#8b5cf6"
-          transparent
-          opacity={0.12}
-          wireframe
-        />
-      </mesh>
-      <mesh ref={icosaRef} position={[-4.5, -1, -2]}>
-        <icosahedronGeometry args={[0.5, 0]} />
-        <meshStandardMaterial
-          color="#06b6d4"
           transparent
           opacity={0.1}
           wireframe
         />
       </mesh>
-      <mesh ref={octaRef} position={[3, -2.5, -4]}>
-        <octahedronGeometry args={[0.35, 0]} />
-        <meshStandardMaterial
-          color="#a855f7"
+      <mesh ref={icosaRef} position={[-4.5, -1, -2]}>
+        <icosahedronGeometry args={[0.5, 0]} />
+        <meshBasicMaterial
+          color="#06b6d4"
           transparent
           opacity={0.08}
           wireframe
@@ -218,18 +190,17 @@ export default function ParticleField() {
     <div className="absolute inset-0 z-0">
       <Canvas
         camera={{ position: [0, 0, 6], fov: 60 }}
-        dpr={[1, 1.5]}
+        dpr={[1, 1]}
         gl={{
           antialias: false,
           alpha: true,
           powerPreference: "high-performance",
         }}
+        frameloop="always"
         style={{ background: "transparent" }}
       >
-        <ambientLight intensity={0.3} />
-        <pointLight position={[5, 5, 5]} intensity={0.5} color="#8b5cf6" />
-        <pointLight position={[-5, -5, 3]} intensity={0.3} color="#06b6d4" />
-        <Particles count={600} />
+        <ambientLight intensity={0.2} />
+        <Particles count={250} />
         <NeuralLines />
         <FloatingGeometry />
       </Canvas>

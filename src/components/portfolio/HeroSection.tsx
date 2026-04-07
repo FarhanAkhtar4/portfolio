@@ -136,9 +136,7 @@ export default function HeroSection() {
       {/* === BACKGROUND LAYERS === */}
 
       {/* 3D Particle field — deepest layer */}
-      <div className="absolute inset-0 z-0">
-        <ParticleField />
-      </div>
+      <ParticleField />
 
       {/* Gradient mesh background layer */}
       <div
