@@ -6,10 +6,12 @@ import SkillsSection from "@/components/portfolio/SkillsSection";
 import CertificationsSection from "@/components/portfolio/CertificationsSection";
 import ContactSection from "@/components/portfolio/ContactSection";
 import Footer from "@/components/portfolio/Footer";
+import CustomCursor from "@/components/portfolio/CustomCursor";
 
 export default function Home() {
   return (
     <main className="min-h-screen noise-overlay">
+      <CustomCursor />
       <Navigation />
       <HeroSection />
       <AboutSection />

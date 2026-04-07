@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { ChevronDown, ArrowRight, Download, Cpu, Github, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,10 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { siteConfig, heroTaglines } from "@/lib/data";
+import AnimatedCounter from "./AnimatedCounter";
+import MagneticButton from "./MagneticButton";
+
+const ParticleField = dynamic(() => import("./ParticleField"), { ssr: false });
 
 const resumeOptions = [
   {
@@ -102,18 +107,24 @@ export default function HeroSection() {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.12,
-        delayChildren: 0.2,
+        staggerChildren: 0.1,
+        delayChildren: 0.15,
       },
     },
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 24 },
+    hidden: { opacity: 0, y: 40, scale: 0.95 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.5, ease: "easeOut" },
+      scale: 1,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+        damping: 15,
+        mass: 0.8,
+      },
     },
   };
 
@@ -122,15 +133,42 @@ export default function HeroSection() {
       id="home"
       className="relative min-h-screen flex items-center justify-center overflow-hidden"
     >
-      {/* Background effects */}
-      <div className="absolute inset-0 hero-grid" />
+      {/* === BACKGROUND LAYERS === */}
 
-      {/* Gradient orbs */}
-      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-purple-600/[0.07] rounded-full blur-[120px] orb-purple" />
-      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-cyan-500/[0.06] rounded-full blur-[120px] orb-cyan" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-purple-600/[0.03] rounded-full blur-[150px]" />
+      {/* 3D Particle field — deepest layer */}
+      <div className="absolute inset-0 z-0">
+        <ParticleField />
+      </div>
 
-      {/* Content */}
+      {/* Gradient mesh background layer */}
+      <div
+        className="absolute inset-0 z-[1] opacity-40"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 50% at 20% 40%, rgba(120, 50, 220, 0.08) 0%, transparent 70%), " +
+            "radial-gradient(ellipse 60% 60% at 80% 60%, rgba(34, 211, 238, 0.06) 0%, transparent 70%), " +
+            "radial-gradient(ellipse 50% 80% at 50% 20%, rgba(168, 85, 247, 0.05) 0%, transparent 60%)",
+        }}
+      />
+
+      {/* Hero grid overlay */}
+      <div className="absolute inset-0 z-[2] hero-grid opacity-30" />
+
+      {/* Gradient orbs — larger and more subtle */}
+      <div className="absolute top-[10%] -left-48 w-[700px] h-[700px] bg-purple-600/[0.04] rounded-full blur-[160px] orb-purple z-[3]" />
+      <div className="absolute bottom-[5%] -right-48 w-[700px] h-[700px] bg-cyan-500/[0.035] rounded-full blur-[160px] orb-cyan z-[3]" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] bg-purple-600/[0.02] rounded-full blur-[200px] z-[3]" />
+
+      {/* Radial vignette overlay */}
+      <div
+        className="absolute inset-0 z-[4] pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse 70% 60% at 50% 50%, transparent 0%, rgba(0,0,0,0.45) 100%)",
+        }}
+      />
+
+      {/* === CONTENT === */}
       <motion.div
         variants={containerVariants}
         initial="hidden"
@@ -145,11 +183,18 @@ export default function HeroSection() {
           </span>
         </motion.div>
 
-        {/* Role tag — recruiter sees this FIRST */}
-        <motion.div variants={itemVariants} className="mb-4">
-          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-purple-500/10 border border-purple-500/20 text-sm text-purple-300 font-medium">
-            <Cpu className="h-3.5 w-3.5" />
-            {siteConfig.role}
+        {/* Role tag — premium with animated border */}
+        <motion.div variants={itemVariants} className="mb-5">
+          <span className="relative inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm text-purple-300 font-medium overflow-hidden">
+            {/* Animated gradient border */}
+            <span className="absolute inset-0 rounded-lg p-[1px] overflow-hidden">
+              <span className="absolute inset-[-200%] animate-[spin_4s_linear_infinite] bg-[conic-gradient(from_0deg,transparent_0%,rgba(168,85,247,0.5)_25%,transparent_50%,rgba(34,211,238,0.4)_75%,transparent_100%)]" />
+            </span>
+            {/* Inner background */}
+            <span className="relative z-10 flex items-center gap-2 rounded-[7px] bg-[#12121a] px-3 py-1">
+              <Cpu className="h-3.5 w-3.5" />
+              {siteConfig.role}
+            </span>
           </span>
         </motion.div>
 
@@ -187,61 +232,65 @@ export default function HeroSection() {
           variants={itemVariants}
           className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14"
         >
-          <Button
-            size="lg"
-            onClick={scrollToProjects}
-            className="bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-semibold px-8 py-6 text-base shadow-lg shadow-purple-500/25 transition-all hover:shadow-purple-500/40 hover:scale-[1.02]"
-          >
-            View My Work
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
+          <MagneticButton>
+            <Button
+              size="lg"
+              onClick={scrollToProjects}
+              className="bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-semibold px-8 py-6 text-base shadow-lg shadow-purple-500/25 transition-all hover:shadow-purple-500/40 hover:scale-[1.02]"
+            >
+              View My Work
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </MagneticButton>
 
           {/* Resume dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="lg"
-                className="border-white/10 text-gray-300 hover:text-white hover:bg-white/5 hover:border-purple-500/50 px-8 py-6 text-base transition-all hover:scale-[1.02]"
+          <MagneticButton>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="border-white/10 text-gray-300 hover:text-white hover:bg-white/5 hover:border-purple-500/50 px-8 py-6 text-base transition-all hover:scale-[1.02]"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Resume
+                  <ChevronDown className="ml-2 h-3.5 w-3.5 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="center"
+                className="w-72 bg-[#12121a] border-white/[0.08] backdrop-blur-xl"
               >
-                <Download className="mr-2 h-4 w-4" />
-                Download Resume
-                <ChevronDown className="ml-2 h-3.5 w-3.5 opacity-60" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="center"
-              className="w-72 bg-[#12121a] border-white/[0.08] backdrop-blur-xl"
-            >
-              {resumeOptions.map((opt) => {
-                if (opt.label === "separator") {
-                  return <DropdownMenuSeparator key="sep" className="bg-white/[0.06]" />;
-                }
-                return (
-                  <DropdownMenuItem
-                    key={opt.label}
-                    onClick={() => window.open(opt.file, "_blank")}
-                    className="flex items-start gap-3 px-3 py-2.5 text-gray-300 hover:text-white hover:bg-white/[0.06] focus:bg-white/[0.06] cursor-pointer"
-                  >
-                    <FileText className={`h-4 w-4 mt-0.5 flex-shrink-0 ${opt.accent ? "text-yellow-400" : "text-gray-500"}`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium flex items-center gap-2">
-                        {opt.label}
-                        {opt.accent && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-yellow-500/15 text-yellow-300 font-semibold">
-                            In Demand
-                          </span>
+                {resumeOptions.map((opt) => {
+                  if (opt.label === "separator") {
+                    return <DropdownMenuSeparator key="sep" className="bg-white/[0.06]" />;
+                  }
+                  return (
+                    <DropdownMenuItem
+                      key={opt.label}
+                      onClick={() => window.open(opt.file, "_blank")}
+                      className="flex items-start gap-3 px-3 py-2.5 text-gray-300 hover:text-white hover:bg-white/[0.06] focus:bg-white/[0.06] cursor-pointer"
+                    >
+                      <FileText className={`h-4 w-4 mt-0.5 flex-shrink-0 ${opt.accent ? "text-yellow-400" : "text-gray-500"}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium flex items-center gap-2">
+                          {opt.label}
+                          {opt.accent && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-yellow-500/15 text-yellow-300 font-semibold">
+                              In Demand
+                            </span>
+                          )}
+                        </div>
+                        {opt.description && (
+                          <div className="text-[11px] text-gray-500 mt-0.5">{opt.description}</div>
                         )}
                       </div>
-                      {opt.description && (
-                        <div className="text-[11px] text-gray-500 mt-0.5">{opt.description}</div>
-                      )}
-                    </div>
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </MagneticButton>
         </motion.div>
 
         {/* Proof stats — scannable in 2 seconds */}
@@ -250,13 +299,13 @@ export default function HeroSection() {
           className="flex items-center justify-center gap-8 sm:gap-12"
         >
           {[
-            { value: "22%", label: "Model Improvement", sublabel: "over XGBoost" },
-            { value: "4", label: "Production Projects", sublabel: "ML + AI systems" },
-            { value: "11", label: "Certifications", sublabel: "AWS \u00b7 NVIDIA \u00b7 IBM" },
+            { value: 22, suffix: "%", label: "Model Improvement", sublabel: "over XGBoost" },
+            { value: 4, suffix: "", label: "Production Projects", sublabel: "ML + AI systems" },
+            { value: 11, suffix: "", label: "Certifications", sublabel: "AWS \u00b7 NVIDIA \u00b7 IBM" },
           ].map((stat, i) => (
             <div key={i} className="text-center">
               <div className="text-2xl sm:text-3xl font-extrabold gradient-text">
-                {stat.value}
+                <AnimatedCounter target={stat.value} suffix={stat.suffix} />
               </div>
               <div className="text-xs sm:text-sm text-gray-400 font-medium mt-0.5">
                 {stat.label}
@@ -268,7 +317,7 @@ export default function HeroSection() {
           ))}
         </motion.div>
 
-        {/* Social links */}
+        {/* Social links — enhanced hover glow */}
         <motion.div
           variants={itemVariants}
           className="flex items-center justify-center gap-4 mt-8"
@@ -277,7 +326,7 @@ export default function HeroSection() {
             href={siteConfig.github}
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2.5 rounded-lg glass-card text-gray-500 hover:text-white hover:bg-white/[0.08] transition-all hover:scale-110"
+            className="p-2.5 rounded-lg glass-card text-gray-500 hover:text-white hover:bg-white/[0.08] transition-all hover:scale-110 glow-hover"
           >
             <Github className="h-5 w-5" />
           </a>
@@ -285,7 +334,7 @@ export default function HeroSection() {
             href={siteConfig.huggingface}
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2.5 rounded-lg glass-card text-gray-500 hover:text-yellow-400 hover:bg-white/[0.08] transition-all hover:scale-110"
+            className="p-2.5 rounded-lg glass-card text-gray-500 hover:text-yellow-400 hover:bg-white/[0.08] transition-all hover:scale-110 glow-hover"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1.41 14.59c-.23.34-.53.12-.93.38-.41-.5.86-1.54 1.17-2.47 1.15-.7-.02-1.23-.26-1.23-.92v-3.15c0-2.09-1.72-3.4-3.59-3.4-1.57 0-2.58 1.04-2.58 2.6 0 .55.24 1.04.61 1.34l2.41 1.77c.7.51 1.57.34 2.49-.42 3.47z" />
@@ -300,7 +349,7 @@ export default function HeroSection() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 2.5 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 scroll-indicator"
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 scroll-indicator z-10"
       >
         <button
           onClick={scrollToProjects}
