@@ -2,9 +2,50 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ChevronDown, ArrowRight, Download, Cpu, Github } from "lucide-react";
+import { ChevronDown, ArrowRight, Download, Cpu, Github, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { siteConfig, heroTaglines } from "@/lib/data";
+
+const resumeOptions = [
+  {
+    label: "General Resume",
+    description: "Agentic AI + ML focused",
+    file: "/resume.pdf",
+    accent: false,
+  },
+  { label: "separator", file: "" },
+  {
+    label: "ML Engineer",
+    description: "Deep Learning, PyTorch, Transformers",
+    file: "/resumes/Farhan_Akhtar_ML_Engineer.pdf",
+    accent: false,
+  },
+  {
+    label: "Agentic AI Engineer",
+    description: "RAG, LLMs, Vector DBs, LangChain",
+    file: "/resumes/Farhan_Akhtar_Agentic_AI_Engineer.pdf",
+    accent: true,
+  },
+  {
+    label: "Generative AI Engineer",
+    description: "GenAI, Fine-Tuning, Prompt Engineering",
+    file: "/resumes/Farhan_Akhtar_GenAI_Engineer.pdf",
+    accent: false,
+  },
+  {
+    label: "AI Engineer",
+    description: "Full-stack AI/ML coverage",
+    file: "/resumes/Farhan_Akhtar_AI_Engineer.pdf",
+    accent: false,
+  },
+];
 
 function useTypewriter(
   strings: string[],
@@ -154,15 +195,53 @@ export default function HeroSection() {
             View My Work
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={() => window.open('/resume.pdf', '_blank')}
-            className="border-white/10 text-gray-300 hover:text-white hover:bg-white/5 hover:border-purple-500/50 px-8 py-6 text-base transition-all hover:scale-[1.02]"
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Download Resume
-          </Button>
+
+          {/* Resume dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="lg"
+                className="border-white/10 text-gray-300 hover:text-white hover:bg-white/5 hover:border-purple-500/50 px-8 py-6 text-base transition-all hover:scale-[1.02]"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download Resume
+                <ChevronDown className="ml-2 h-3.5 w-3.5 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="center"
+              className="w-72 bg-[#12121a] border-white/[0.08] backdrop-blur-xl"
+            >
+              {resumeOptions.map((opt) => {
+                if (opt.label === "separator") {
+                  return <DropdownMenuSeparator key="sep" className="bg-white/[0.06]" />;
+                }
+                return (
+                  <DropdownMenuItem
+                    key={opt.label}
+                    onClick={() => window.open(opt.file, "_blank")}
+                    className="flex items-start gap-3 px-3 py-2.5 text-gray-300 hover:text-white hover:bg-white/[0.06] focus:bg-white/[0.06] cursor-pointer"
+                  >
+                    <FileText className={`h-4 w-4 mt-0.5 flex-shrink-0 ${opt.accent ? "text-yellow-400" : "text-gray-500"}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium flex items-center gap-2">
+                        {opt.label}
+                        {opt.accent && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-yellow-500/15 text-yellow-300 font-semibold">
+                            In Demand
+                          </span>
+                        )}
+                      </div>
+                      {opt.description && (
+                        <div className="text-[11px] text-gray-500 mt-0.5">{opt.description}</div>
+                      )}
+                    </div>
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </motion.div>
 
         {/* Proof stats — scannable in 2 seconds */}
@@ -173,7 +252,7 @@ export default function HeroSection() {
           {[
             { value: "22%", label: "Model Improvement", sublabel: "over XGBoost" },
             { value: "4", label: "Production Projects", sublabel: "ML + AI systems" },
-            { value: "11", label: "Certifications", sublabel: "AWS · NVIDIA · IBM" },
+            { value: "11", label: "Certifications", sublabel: "AWS \u00b7 NVIDIA \u00b7 IBM" },
           ].map((stat, i) => (
             <div key={i} className="text-center">
               <div className="text-2xl sm:text-3xl font-extrabold gradient-text">
@@ -214,7 +293,7 @@ export default function HeroSection() {
           </a>
         </motion.div>
 
-        </motion.div>
+      </motion.div>
 
       {/* Scroll indicator */}
       <motion.div
